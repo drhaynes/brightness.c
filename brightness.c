@@ -1,6 +1,6 @@
 /* brightness.c - set brightness of display and keyboard backlights in OSX
  *
- * Can be used to set the brightness of the backilghts well below the minimum
+ * Can be used to set the brightness of the backlights well below the minimum
  * level permitted by the normal function keys. This is especially useful for
  * e.g. setting the keybaord backlight at night (0.01 is a suggested value).
  *
@@ -85,6 +85,54 @@ void setKeyboardBrightness(float in) {
         printf("keyboard brightness is %f\n", in);
     }
 }
+ 
+/**
+ *  Workaround for deprecation of CGDisplayIOServicePort. Return io_service_t
+ *  for a given display id, or NULL on failure.
+ */
+static io_service_t IOServicePortForCGDisplayID(CGDirectDisplayID displayID)
+{
+    io_iterator_t iter;
+    io_service_t serv, servicePort = 0;
+    CFMutableDictionaryRef matching = IOServiceMatching("IODisplayConnect");
+
+    kern_return_t err = IOServiceGetMatchingServices(kIOMasterPortDefault,
+                                                     matching, &iter);
+    if (err) {
+        return 0;
+    }
+
+    while ((serv = IOIteratorNext(iter)) != 0) {
+        CFDictionaryRef info;
+        CFIndex vendorID, productID;
+        CFNumberRef vendorIDRef, productIDRef;
+        Boolean success;
+
+        info = IODisplayCreateInfoDictionary(serv, kIODisplayOnlyPreferredName);
+        vendorIDRef = CFDictionaryGetValue(info, CFSTR(kDisplayVendorID));
+        productIDRef = CFDictionaryGetValue(info, CFSTR(kDisplayProductID));
+        success = CFNumberGetValue(vendorIDRef, kCFNumberCFIndexType, &vendorID);
+        success &= CFNumberGetValue(productIDRef, kCFNumberCFIndexType, &productID);
+
+        if (!success) {
+            CFRelease(info);
+            continue;
+        }
+
+        if (CGDisplayVendorNumber(displayID) != vendorID ||
+            CGDisplayModelNumber(displayID) != productID) {
+            CFRelease(info);
+            continue;
+        }
+
+        servicePort = serv;
+        CFRelease(info);
+        break;
+    }
+    
+    IOObjectRelease(iter);
+    return servicePort;
+}
 
 int main(int argc, char **argv) {
 	CGDisplayErr dErr;
@@ -95,19 +143,17 @@ int main(int argc, char **argv) {
 
     switch (argc) {
 	 	case 1: 
-	 		break; 
-
+	 		break;
 	 	case 2: 
 	 		brightness = strtof(argv[1], NULL);
-	 		break; 
-
+	 		break;
 	 	default:
 	 		usage();
 	 		break;
     }
 
     targetDisplay = CGMainDisplayID();
-    service = CGDisplayIOServicePort(targetDisplay);
+    service = IOServicePortForCGDisplayID(targetDisplay);
 
     if (brightness != HUGE_VALF) {
     	// set the display brightness, if requested
