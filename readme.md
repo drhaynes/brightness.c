@@ -2,17 +2,17 @@
 
 Set brightness of display and keyboard backlight from the Terminal in OS X.
    
-###Building
+### Building
     gcc -o brightness brightness.c -framework IOKit \
        -framework ApplicationServices -framework CoreFoundation
 
-###Usage
+### Usage
     $ brightness <float value between 0..1>
 
-###E.g.
+### E.g.
     $ brightness 0.01   # ideal for night-time hacking
 
-###Notes
+### Notes
 Can be used to set the brightness of the backlights well below the minimum
 level permitted by the normal function keys. This is especially useful for
 e.g. setting the keyboard backlight at night (0.01 is a suggested value).
@@ -23,6 +23,6 @@ The keyboard backlight does not appear to have a similar hard limit.
 
 Works on 64-bit machines only, due to use of IOConnectCallScalarMethod.
  
-###Inspired by:
+### Inspired by:
 * [Io AppleExtras](https://github.com/stevedekorte/io/blob/master/addons/AppleExtras) by Steve Dekorte
 * [Experimenting With Light On Apple Notebook Computers](http://www.osxbook.com/book/bonus/chapter10/light/) by Amit Singh
